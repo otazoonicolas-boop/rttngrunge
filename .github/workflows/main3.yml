@@ -1,0 +1,31 @@
+name: Build VST3 (Windows, Visual Studio)
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  vst3-juce:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Localizar proyecto
+        shell: bash
+        run: |
+          d=$(dirname "$(find . -type d -name NoJUCE | head -n1)")
+          echo "Proyecto en: $d"
+          echo "PROJ=$d" >> "$GITHUB_ENV"
+
+      - name: Configurar
+        shell: bash
+        run: cmake -S "$PROJ" -B build-juce -A x64 -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+
+      - name: Compilar
+        shell: bash
+        run: cmake --build build-juce --config Release --target SR1VocalChain_VST3 --parallel
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Noctua_SR1_VST3_Windows
+          path: build-juce/SR1VocalChain_artefacts/Release/VST3
