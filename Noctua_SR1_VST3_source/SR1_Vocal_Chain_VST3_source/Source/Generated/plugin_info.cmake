@@ -1,0 +1,2 @@
+set(SR1_PRODUCT_NAME "Noctua SR1")
+set(SR1_PLUGIN_CODE Nct1)
