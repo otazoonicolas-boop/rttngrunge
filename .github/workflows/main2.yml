@@ -1,0 +1,59 @@
+name: Build VST3 (Windows, Visual Studio)
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  vst3-sdk:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Descargar SDK VST3
+        shell: bash
+        run: |
+          git clone https://github.com/steinbergmedia/vst3sdk.git vst3sdk
+          git -C vst3sdk checkout 3cdf9ca5d1f5b1b21e0a86832aa4abe55607bd96
+          git -C vst3sdk submodule update --init --depth 1 base pluginterfaces public.sdk cmake
+
+      - name: Configurar
+        shell: bash
+        run: cmake -S SR1_Vocal_Chain_VST3_source/NoJUCE -B build-sdk -A x64 -DVST3SDK_DIR="${{ github.workspace }}/vst3sdk" -DSR1_BUILD_VALIDATOR=ON -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+
+      - name: Compilar plugin y validador
+        shell: bash
+        run: cmake --build build-sdk --config Release --target SR1VocalChain validator --parallel
+
+      - name: Validar con el validador oficial de Steinberg
+        continue-on-error: true
+        shell: bash
+        run: ./build-sdk/bin/Release/validator.exe build-sdk/VST3/Release/SR1VocalChain.vst3 | tail -n 20
+
+      - name: Empaquetar
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp -r build-sdk/VST3/Release/SR1VocalChain.vst3 "dist/SR1 Vocal Chain.vst3"
+          find dist -type f
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SR1_Vocal_Chain_VST3_Windows
+          path: dist
+
+  vst3-juce:
+    runs-on: windows-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configurar
+        shell: bash
+        run: cmake -S SR1_Vocal_Chain_VST3_source -B build-juce -A x64 -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+      - name: Compilar
+        shell: bash
+        run: cmake --build build-juce --config Release --target SR1VocalChain_VST3 --parallel
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SR1_Vocal_Chain_VST3_Windows_JUCE_GUI
+          path: build-juce/SR1VocalChain_artefacts/Release/VST3
